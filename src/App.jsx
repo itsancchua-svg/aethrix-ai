@@ -8,13 +8,14 @@ import {
   signOut,
 } from "firebase/auth"
 
-import {
-  auth,
-} from "./firebase"
+import { auth }
+from "./firebase"
 
-import Dashboard from "./pages/Dashboard"
+import Dashboard
+from "./pages/Dashboard"
 
-import Login from "./pages/Login"
+import Login
+from "./pages/Login"
 
 function App() {
   const [user,
@@ -73,8 +74,11 @@ function App() {
           color:
             "white",
 
+          fontSize:
+            "24px",
+
           fontFamily:
-            "'Inter', sans-serif",
+            "Inter, sans-serif",
         }}
       >
         Loading Aethrix...
