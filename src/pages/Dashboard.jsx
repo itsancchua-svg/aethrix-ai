@@ -15,6 +15,9 @@ import {
   query,
   orderBy,
   onSnapshot,
+  doc,
+  setDoc,
+  getDoc,
 } from "firebase/firestore"
 
 import {
@@ -45,26 +48,150 @@ function Dashboard({
   const [selectedModel, setSelectedModel] =
     useState("GPT Core")
 
-  const chatEndRef = useRef(null)
+  const [chatSessions, setChatSessions] =
+    useState([])
 
-  // ANALYTICS
+  const [allChats, setAllChats] =
+    useState({})
+
+  const [currentChatId, setCurrentChatId] =
+    useState(null)
+
+  const chatEndRef =
+    useRef(null)
+
+  // SAVE CHAT SESSIONS
+
+  const saveChatSessions =
+    async (
+      sessionsData
+    ) => {
+      if (
+        !currentUser?.uid
+      )
+        return
+
+      await setDoc(
+        doc(
+          db,
+          "users",
+          currentUser.uid,
+          "chatSessions",
+          "sessions"
+        ),
+        {
+          sessions:
+            sessionsData,
+        }
+      )
+    }
+
+  // SAVE ALL CHATS
+
+  const saveAllChats =
+    async (
+      chatsData
+    ) => {
+      if (
+        !currentUser?.uid
+      )
+        return
+
+      await setDoc(
+        doc(
+          db,
+          "users",
+          currentUser.uid,
+          "chatData",
+          "messages"
+        ),
+        {
+          chats:
+            chatsData,
+        }
+      )
+    }
+
+  // CREATE NEW CHAT
+
+    const createNewChat =
+      async () => {
+      const newChat = {
+        id:
+          Date.now().toString(),
+
+        title:
+          "New Conversation",
+      }
+
+      setChatSessions(
+        (prev) => {
+          const updated =
+            [
+              newChat,
+              ...prev,
+            ]
+
+          saveChatSessions(
+            updated
+          )
+
+          return updated
+          }
+          )
+      setAllChats(
+        (prev) => {
+          const updated =
+            {
+              ...prev,
+
+              [newChat.id]:
+                [],
+            }
+
+          saveAllChats(
+            updated
+          )
+
+          return updated
+          }
+          )
+      setChat([])
+
+      setActiveTab(
+        "ai chat"
+      )
+      return newChat.id
+    }
+
+  // LIVE ANALYTICS
 
   const totalMessages =
-    chat.length
+    Object.values(
+      allChats
+    ).flat().length
 
   const totalUserMessages =
-    chat.filter(
-      (msg) =>
-        msg.sender ===
-        "user"
-    ).length
+    Object.values(
+      allChats
+    )
+      .flat()
+      .filter(
+        (msg) =>
+          msg.sender ===
+          "user"
+      ).length
 
   const totalAiMessages =
-    chat.filter(
-      (msg) =>
-        msg.sender ===
-        "ai"
-    ).length
+    Object.values(
+      allChats
+    )
+      .flat()
+      .filter(
+        (msg) =>
+          msg.sender ===
+          "ai"
+      ).length
 
   // AUTH
 
@@ -73,17 +200,114 @@ function Dashboard({
       onAuthStateChanged(
         auth,
         (user) => {
-          setCurrentUser(user)
+          setCurrentUser(
+            user
+          )
         }
       )
 
-    return () => unsubscribe()
+    return () =>
+      unsubscribe()
   }, [])
 
-  // LOAD CHAT
+  // LOAD SAVED SESSIONS + CHATS
+
+ useEffect(() => {
+  const loadSessions =
+    async () => {
+      if (
+        !currentUser?.uid
+      )
+        return
+
+      // LOAD CHAT SESSIONS
+
+      const sessionsRef =
+        doc(
+          db,
+          "users",
+          currentUser.uid,
+          "chatSessions",
+          "sessions"
+        )
+
+      const sessionsSnap =
+        await getDoc(
+          sessionsRef
+        )
+
+      if (
+        sessionsSnap.exists()
+      ) {
+        const data =
+          sessionsSnap.data()
+
+        if (
+          data.sessions
+        ) {
+          setChatSessions(
+            data.sessions
+          )
+          if (
+  data.sessions.length > 0
+) {
+  setCurrentChatId(
+    data.sessions[0].id
+  )
+}
+        }
+      }
+
+      // LOAD ALL CHAT DATA
+
+      const chatsRef =
+        doc(
+          db,
+          "users",
+          currentUser.uid,
+          "chatData",
+          "messages"
+        )
+
+      const chatsSnap =
+        await getDoc(
+          chatsRef
+        )
+
+      if (
+        chatsSnap.exists()
+      ) {
+        const data =
+          chatsSnap.data()
+
+        if (
+          data.chats
+        ) {
+          setAllChats(
+            data.chats
+          )
+          if (
+            currentChatId
+         ) {
+       setChat(
+         data.chats[
+             currentChatId
+           ] || []
+        )
+      }
+        }
+      }
+    }
+
+  loadSessions()
+}, [currentUser])
+ 
+  // LOAD FIREBASE MESSAGES
 
   useEffect(() => {
-    if (!currentUser?.uid)
+    if (
+      !currentUser?.uid
+    )
       return
 
     const q = query(
@@ -93,61 +317,44 @@ function Dashboard({
         currentUser.uid,
         "messages"
       ),
-      orderBy("createdAt")
+      orderBy(
+        "createdAt"
+      )
     )
 
     const unsubscribe =
-      onSnapshot(q, (snapshot) => {
-        const loaded =
-          snapshot.docs.map(
-            (doc) =>
-              doc.data()
-          )
+      onSnapshot(
+        q,
+        () => {}
+      )
 
-        setChat(loaded)
-      })
-
-    return () => unsubscribe()
+    return () =>
+      unsubscribe()
   }, [currentUser])
 
   // AUTO SCROLL
 
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({
-      behavior: "smooth",
-    })
+    chatEndRef.current?.scrollIntoView(
+      {
+        behavior:
+          "smooth",
+      }
+    )
   }, [chat])
 
   // SAVE MESSAGE
-
-  const saveMessage =
-    async (msg) => {
-      if (!currentUser?.uid)
-        return
-
-      await addDoc(
-        collection(
-          db,
-          "users",
-          currentUser.uid,
-          "messages"
-        ),
-        {
-          ...msg,
-          createdAt:
-            Date.now(),
-        }
-      )
-    }
 
   // SEND MESSAGE
 
   const sendMessage =
     async (
-      customPrompt = null
+      customPrompt =
+        null
     ) => {
       const finalMessage =
-        customPrompt || message
+        customPrompt ||
+        message
 
       if (
         !finalMessage.trim() ||
@@ -155,30 +362,77 @@ function Dashboard({
       )
         return
 
-      setActiveTab(
-        "ai chat"
-      )
+      let activeChatId =
+         currentChatId
+  
+      if (
+          !activeChatId
+     ) {
+           activeChatId =
+           createNewChat()
+        }
 
-      const userMessage = {
-        sender: "user",
-        text: finalMessage,
-      }
+      const userMessage =
+        {
+          sender:
+            "user",
 
-      await saveMessage(
-        userMessage
+          text:
+            finalMessage,
+        }
+
+      // AUTO TITLE
+
+      setChatSessions(
+        (prev) => {
+          const updated =
+            prev.map(
+              (
+                session
+              ) =>
+                session.id ===
+                activeChatId
+                  ? {
+                      ...session,
+
+                      title:
+                        finalMessage.slice(
+                          0,
+                          28
+                        ),
+                    }
+                  : session
+            )
+
+          saveChatSessions(
+            updated
+          )
+
+          return updated
+        }
       )
 
       setMessage("")
       setLoading(true)
 
-      let personalityPrompt = ""
+      // TEMP UI UPDATE
+
+      setChat(
+        (prev) => [
+          ...prev,
+          userMessage,
+        ]
+      )
+
+      let personalityPrompt =
+        ""
 
       if (
         selectedModel ===
         "GPT Core"
       ) {
         personalityPrompt =
-          "You are Aethrix AI created by Ashley Chua."
+          "You are Aethrix AI, a balanced and intelligent AI assistant created by Ashley Chua."
       }
 
       if (
@@ -186,7 +440,7 @@ function Dashboard({
         "Jarvis X"
       ) {
         personalityPrompt =
-          "You are Jarvis X, a futuristic AI created by Ashley Chua."
+          "You are Jarvis X, a futuristic AI assistant created by Ashley Chua."
       }
 
       if (
@@ -194,7 +448,7 @@ function Dashboard({
         "Vision AI"
       ) {
         personalityPrompt =
-          "You are Vision AI focused on creativity and design."
+          "You are Vision AI, a creative AI assistant created by Ashley Chua."
       }
 
       if (
@@ -202,57 +456,109 @@ function Dashboard({
         "Neural Pro"
       ) {
         personalityPrompt =
-          "You are Neural Pro focused on coding and logic."
+          "You are Neural Pro, an advanced analytical AI created by Ashley Chua."
       }
 
       try {
         const response =
           await fetch(
-            "http://localhost:3001/chat",
+            "https://aethrix-ai.onrender.com/chat",
             {
-              method: "POST",
+              method:
+                "POST",
 
-              headers: {
-                "Content-Type":
-                  "application/json",
-              },
+              headers:
+                {
+                  "Content-Type":
+                    "application/json",
+                },
 
-              body: JSON.stringify({
-                message:
-                  `${personalityPrompt}\n\nUser: ${finalMessage}`,
+              body:
+                JSON.stringify(
+                  {
+                    message: `${personalityPrompt}\n\nUser: ${finalMessage}`,
 
-                personality:
-                  selectedModel,
+                    personality:
+                      selectedModel,
 
-                selectedModel:
-                  selectedModel,
-              }),
+                    selectedModel:
+                      selectedModel,
+                  }
+                ),
             }
           )
 
         const data =
           await response.json()
 
-        const aiMessage = {
-          sender: "ai",
+        const aiMessage =
+          {
+            sender:
+              "ai",
 
-          text:
-            data.reply ||
-            "No response.",
-        }
+            text:
+              data.reply ||
+              "No response.",
+          }
 
-        await saveMessage(
-          aiMessage
+        const updatedChat =
+          [
+            ...(allChats[
+              activeChatId
+            ] || []),
+
+            userMessage,
+
+            aiMessage,
+          ]
+
+        // UPDATE UI
+
+        setChat(
+          updatedChat
         )
+
+        // UPDATE ALL CHATS
+
+        setAllChats(
+          (prev) => {
+            const updated =
+              {
+                ...prev,
+
+                [activeChatId]:
+                  updatedChat,
+              }
+
+            saveAllChats(
+              updated
+            )
+
+            return updated
+          }
+        )
+
+       
       } catch (error) {
-        console.log(error)
+        console.log(
+          error
+        )
 
-        await saveMessage({
-          sender: "ai",
+        const errorMessage =
+          {
+            sender:
+              "ai",
 
-          text:
-            "Backend connection failed.",
-        })
+            text:
+              "Backend connection failed.",
+          }
+
+        setChat(
+          (prev) => [
+            ...prev,
+            errorMessage,
+          ]
+        )
       }
 
       setLoading(false)
@@ -267,23 +573,28 @@ function Dashboard({
         background:
           "radial-gradient(circle at top, #0f172a 0%, #020617 70%)",
 
-        color: "white",
+        color:
+          "white",
 
         fontFamily:
           "'Space Grotesk', sans-serif",
 
-        display: "flex",
+        display:
+          "flex",
 
-        overflow: "hidden",
+        overflow:
+          "hidden",
       }}
     >
       {/* SIDEBAR */}
 
       <div
         style={{
-          width: "320px",
+          width:
+            "320px",
 
-          padding: "28px",
+          padding:
+            "28px",
 
           borderRight:
             "1px solid rgba(255,255,255,0.06)",
@@ -293,6 +604,9 @@ function Dashboard({
 
           backdropFilter:
             "blur(30px)",
+
+          overflowY:
+            "auto",
         }}
       >
         <h1
@@ -319,6 +633,8 @@ function Dashboard({
           Aethrix
         </h1>
 
+        {/* NAVIGATION */}
+
         {[
           "workspace",
           "ai chat",
@@ -335,7 +651,8 @@ function Dashboard({
               )
             }
             style={{
-              width: "100%",
+              width:
+                "100%",
 
               padding:
                 "18px",
@@ -350,7 +667,8 @@ function Dashboard({
                 "1px solid rgba(255,255,255,0.06)",
 
               background:
-                activeTab === item
+                activeTab ===
+                item
                   ? "linear-gradient(to right,#2563eb,#7c3aed)"
                   : "rgba(255,255,255,0.03)",
 
@@ -370,6 +688,222 @@ function Dashboard({
             {item}
           </button>
         ))}
+
+        {/* NEW CHAT */}
+
+        <button
+          onClick={
+            createNewChat
+          }
+          style={{
+            width:
+              "100%",
+
+            padding:
+              "18px",
+
+            marginTop:
+              "10px",
+
+            marginBottom:
+              "24px",
+
+            borderRadius:
+              "22px",
+
+            border:
+              "none",
+
+            background:
+              "linear-gradient(to right,#2563eb,#7c3aed)",
+
+            color:
+              "white",
+
+            fontWeight:
+              "bold",
+
+            fontSize:
+              "16px",
+
+            cursor:
+              "pointer",
+          }}
+        >
+          + New Chat
+        </button>
+
+        {/* CHAT HISTORY */}
+
+        <div
+          style={{
+            marginBottom:
+              "24px",
+
+            display:
+              "flex",
+
+            flexDirection:
+              "column",
+
+            gap: "12px",
+          }}
+        >
+          {chatSessions.map(
+            (
+              session
+            ) => (
+              <button
+                key={
+                  session.id
+                }
+                onClick={() => {
+                  setCurrentChatId(
+                    session.id
+                  )
+
+                  setChat(
+                    allChats[
+                      session.id
+                    ] || []
+                  )
+
+                  setActiveTab(
+                    "ai chat"
+                  )
+                }}
+                style={{
+                  padding:
+                    "16px",
+
+                  borderRadius:
+                    "18px",
+
+                  border:
+                    currentChatId ===
+                    session.id
+                      ? "1px solid #60a5fa"
+                      : "1px solid rgba(255,255,255,0.06)",
+
+                  background:
+                    currentChatId ===
+                    session.id
+                      ? "rgba(59,130,246,0.18)"
+                      : "rgba(255,255,255,0.03)",
+
+                  color:
+                    "white",
+
+                  cursor:
+                    "pointer",
+
+                  textAlign:
+                    "left",
+
+                  fontSize:
+                    "14px",
+                }}
+              >
+                <div
+                  style={{
+                    display:
+                      "flex",
+
+                    justifyContent:
+                      "space-between",
+
+                    alignItems:
+                      "center",
+                  }}
+                >
+                  <span>
+                    {
+                      session.title
+                    }
+                  </span>
+
+                  <span
+                    onClick={(
+                      e
+                    ) => {
+                      e.stopPropagation()
+
+                      setChatSessions(
+                        (
+                          prev
+                        ) => {
+                          const updated =
+                            prev.filter(
+                              (
+                                chat
+                              ) =>
+                                chat.id !==
+                                session.id
+                            )
+
+                          saveChatSessions(
+                            updated
+                          )
+
+                          return updated
+                        }
+                      )
+
+                      setAllChats(
+                        (
+                          prev
+                        ) => {
+                          const updated =
+                            {
+                              ...prev,
+                            }
+
+                          delete updated[
+                            session.id
+                          ]
+
+                          saveAllChats(
+                            updated
+                          )
+
+                          return updated
+                        }
+                      )
+
+                      if (
+                        currentChatId ===
+                        session.id
+                      ) {
+                        setCurrentChatId(
+                          null
+                        )
+
+                        setChat(
+                          []
+                        )
+                      }
+                    }}
+                    style={{
+                      color:
+                        "#ef4444",
+
+                      cursor:
+                        "pointer",
+
+                      fontWeight:
+                        "bold",
+
+                      marginLeft:
+                        "10px",
+                    }}
+                  >
+                    ×
+                  </span>
+                </div>
+              </button>
+            )
+          )}
+        </div>
 
         {/* CREATOR */}
 
@@ -412,11 +946,16 @@ function Dashboard({
                 "15px",
             }}
           >
-            Creator of Aethrix AI.
-            Building futuristic AI
-            systems and intelligent
-            workspaces powered by
-            Firebase and OpenAI.
+            Creator of
+            Aethrix AI.
+            Building
+            futuristic AI
+            systems and
+            intelligent
+            workspaces
+            powered by
+            Firebase and
+            OpenAI.
           </p>
         </div>
       </div>
@@ -427,96 +966,13 @@ function Dashboard({
         style={{
           flex: 1,
 
-          padding: "34px",
+          padding:
+            "34px",
 
           overflowY:
             "auto",
         }}
       >
-        {/* TOPBAR */}
-
-        <div
-          style={{
-            display: "flex",
-
-            justifyContent:
-              "space-between",
-
-            alignItems:
-              "center",
-
-            marginBottom:
-              "36px",
-          }}
-        >
-          <div>
-            <h1
-              style={{
-                fontSize:
-                  "72px",
-
-                margin: 0,
-
-                fontWeight:
-                  "900",
-
-                background:
-                  "linear-gradient(to right,#60a5fa,#c084fc)",
-
-                WebkitBackgroundClip:
-                  "text",
-
-                WebkitTextFillColor:
-                  "transparent",
-              }}
-            >
-              Aethrix AI
-            </h1>
-
-            <p
-              style={{
-                color:
-                  "#94a3b8",
-
-                marginTop:
-                  "10px",
-
-                fontSize:
-                  "18px",
-              }}
-            >
-              Intelligent AI Workspace
-            </p>
-          </div>
-
-          <button
-            onClick={logout}
-            style={{
-              padding:
-                "16px 28px",
-
-              borderRadius:
-                "18px",
-
-              border: "none",
-
-              background:
-                "linear-gradient(to right,#2563eb,#7c3aed)",
-
-              color:
-                "white",
-
-              fontWeight:
-                "bold",
-
-              cursor:
-                "pointer",
-            }}
-          >
-            Logout
-          </button>
-        </div>
-
         {/* WORKSPACE */}
 
         {activeTab ===
@@ -593,6 +1049,305 @@ function Dashboard({
           </>
         )}
 
+        {/* ANALYTICS */}
+
+        {activeTab ===
+          "analytics" && (
+          <div>
+            <h1
+              style={{
+                fontSize:
+                  "64px",
+
+                marginBottom:
+                  "30px",
+              }}
+            >
+              Analytics
+            </h1>
+
+            <div
+              style={{
+                display:
+                  "grid",
+
+                gridTemplateColumns:
+                  "repeat(auto-fit,minmax(280px,1fr))",
+
+                gap: "24px",
+              }}
+            >
+              {[
+                {
+                  title:
+                    "Total Messages",
+
+                  value:
+                    totalMessages,
+                },
+
+                {
+                  title:
+                    "User Messages",
+
+                  value:
+                    totalUserMessages,
+                },
+
+                {
+                  title:
+                    "AI Responses",
+
+                  value:
+                    totalAiMessages,
+                },
+
+                {
+                  title:
+                    "Active Model",
+
+                  value:
+                    selectedModel,
+                },
+              ].map((item) => (
+                <div
+                  key={
+                    item.title
+                  }
+                  style={{
+                    padding:
+                      "40px",
+
+                    borderRadius:
+                      "30px",
+
+                    background:
+                      "rgba(255,255,255,0.04)",
+
+                    border:
+                      "1px solid rgba(255,255,255,0.08)",
+                  }}
+                >
+                  <p
+                    style={{
+                      color:
+                        "#94a3b8",
+
+                      marginBottom:
+                        "12px",
+                    }}
+                  >
+                    {
+                      item.title
+                    }
+                  </p>
+
+                  <h1
+                    style={{
+                      fontSize:
+                        "52px",
+
+                      margin: 0,
+                    }}
+                  >
+                    {
+                      item.value
+                    }
+                  </h1>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* MEMORY */}
+
+        {activeTab ===
+          "memory" && (
+          <div>
+            <h1
+              style={{
+                fontSize:
+                  "64px",
+
+                marginBottom:
+                  "30px",
+              }}
+            >
+              Memory
+            </h1>
+
+            <div
+              style={{
+                display:
+                  "flex",
+
+                flexDirection:
+                  "column",
+
+                gap: "20px",
+              }}
+            >
+              {chat.length ===
+              0 ? (
+                <div
+                  style={{
+                    padding:
+                      "40px",
+
+                    borderRadius:
+                      "30px",
+
+                    background:
+                      "rgba(255,255,255,0.04)",
+
+                    border:
+                      "1px solid rgba(255,255,255,0.08)",
+                  }}
+                >
+                  <h2>
+                    No Memories Yet
+                  </h2>
+
+                  <p
+                    style={{
+                      color:
+                        "#94a3b8",
+                    }}
+                  >
+                    Your AI memory
+                    archive will
+                    appear here after
+                    chatting.
+                  </p>
+                </div>
+              ) : (
+                [...chat]
+                  .reverse()
+                  .slice(0, 10)
+                  .map(
+                    (
+                      msg,
+                      i
+                    ) => (
+                      <div
+                        key={i}
+                        style={{
+                          padding:
+                            "30px",
+
+                          borderRadius:
+                            "30px",
+
+                          background:
+                            "rgba(255,255,255,0.04)",
+
+                          border:
+                            "1px solid rgba(255,255,255,0.08)",
+                        }}
+                      >
+                        <h2>
+                          {msg.sender ===
+                          "user"
+                            ? "User Memory"
+                            : "AI Response"}
+                        </h2>
+
+                        <p
+                          style={{
+                            color:
+                              "#cbd5e1",
+
+                            lineHeight:
+                              1.8,
+                          }}
+                        >
+                          {
+                            msg.text
+                          }
+                        </p>
+                      </div>
+                    )
+                  )
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* SETTINGS */}
+
+        {activeTab ===
+          "settings" && (
+          <div>
+            <h1
+              style={{
+                fontSize:
+                  "64px",
+
+                marginBottom:
+                  "30px",
+              }}
+            >
+              Settings
+            </h1>
+
+            <div
+              style={{
+                display:
+                  "flex",
+
+                gap: "18px",
+
+                flexWrap:
+                  "wrap",
+              }}
+            >
+              {[
+                "GPT Core",
+                "Jarvis X",
+                "Vision AI",
+                "Neural Pro",
+              ].map((model) => (
+                <button
+                  key={model}
+                  onClick={() =>
+                    setSelectedModel(
+                      model
+                    )
+                  }
+                  style={{
+                    padding:
+                      "18px 28px",
+
+                    borderRadius:
+                      "22px",
+
+                    border:
+                      selectedModel ===
+                      model
+                        ? "1px solid #60a5fa"
+                        : "1px solid rgba(255,255,255,0.08)",
+
+                    background:
+                      selectedModel ===
+                      model
+                        ? "linear-gradient(to right,#2563eb,#7c3aed)"
+                        : "rgba(255,255,255,0.04)",
+
+                    color:
+                      "white",
+
+                    cursor:
+                      "pointer",
+                  }}
+                >
+                  {model}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* AI CHAT */}
 
         {activeTab ===
@@ -602,12 +1357,108 @@ function Dashboard({
               height:
                 "calc(100vh - 160px)",
 
-              display: "flex",
+              display:
+                "flex",
 
               flexDirection:
                 "column",
             }}
           >
+            <div
+              style={{
+                marginBottom:
+                  "18px",
+
+                display:
+                  "flex",
+
+                justifyContent:
+                  "space-between",
+
+                alignItems:
+                  "center",
+
+                padding:
+                  "18px 24px",
+
+                borderRadius:
+                  "24px",
+
+                background:
+                  "rgba(255,255,255,0.04)",
+
+                border:
+                  "1px solid rgba(255,255,255,0.08)",
+              }}
+            >
+              <div>
+                <p
+                  style={{
+                    color:
+                      "#94a3b8",
+
+                    marginBottom:
+                      "6px",
+
+                    fontSize:
+                      "14px",
+                  }}
+                >
+                  ACTIVE MODEL
+                </p>
+
+                <h2
+                  style={{
+                    fontSize:
+                      "28px",
+
+                    margin: 0,
+                  }}
+                >
+                  {
+                    selectedModel
+                  }
+                </h2>
+              </div>
+
+              <div
+                style={{
+                  display:
+                    "flex",
+
+                  alignItems:
+                    "center",
+
+                  gap: "10px",
+                }}
+              >
+                <div
+                  style={{
+                    width:
+                      "12px",
+
+                    height:
+                      "12px",
+
+                    borderRadius:
+                      "50%",
+
+                    background:
+                      "#22c55e",
+
+                    boxShadow:
+                      "0 0 18px #22c55e",
+                  }}
+                />
+
+                <span>
+                  Online
+                </span>
+              </div>
+            </div>
+
+            {/* CHAT AREA */}
+
             <div
               style={{
                 flex: 1,
@@ -656,6 +1507,8 @@ function Dashboard({
               />
             </div>
 
+            {/* INPUT */}
+
             <div
               style={{
                 display:
@@ -669,12 +1522,17 @@ function Dashboard({
             >
               <input
                 value={message}
-                onChange={(e) =>
+                onChange={(
+                  e
+                ) =>
                   setMessage(
-                    e.target.value
+                    e.target
+                      .value
                   )
                 }
-                onKeyDown={(e) => {
+                onKeyDown={(
+                  e
+                ) => {
                   if (
                     e.key ===
                       "Enter" &&
