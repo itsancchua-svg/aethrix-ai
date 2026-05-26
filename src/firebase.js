@@ -1,32 +1,34 @@
 import { initializeApp } from "firebase/app"
 
-import { getAuth } from "firebase/auth"
-
-import { getFirestore } from "firebase/firestore"
+import {
+  getAuth,
+} from "firebase/auth"
 
 const firebaseConfig = {
-  apiKey: "AIzaSyB1kJdnNlNl32KM4s1_VYK3snUtft9iN-E",
+  apiKey:
+    "AIzaSyCXhXut1TBsVK6wc2GD2BKBm5-Jxmu6MhU",
 
   authDomain:
-    "aethrix-ai-9735f.firebaseapp.com",
+    "aethrix-ai.firebaseapp.com",
 
-  projectId: "aethrix-ai-9735f",
+  projectId:
+    "aethrix-ai",
 
   storageBucket:
-    "aethrix-ai-9735f.firebasestorage.app",
+    "aethrix-ai.firebasestorage.app",
 
   messagingSenderId:
-    "1083760398275",
+    "349758228713",
 
   appId:
-    "1:1083760398275:web:32d8bc75c3b7b294e4f776",
+    "1:349758228713:web:a29785d80761fdf1fd4878",
 
-  measurementId: "G-5JLDWV9QQH",
+  measurementId:
+    "G-L4ZPJS7H9Z",
 }
 
 const app =
   initializeApp(firebaseConfig)
 
-export const auth = getAuth(app)
-
-export const db = getFirestore(app)
+export const auth =
+  getAuth(app)

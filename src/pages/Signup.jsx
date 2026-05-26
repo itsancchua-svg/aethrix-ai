@@ -1,22 +1,30 @@
-import { useState } from "react"
+import {
+  useState,
+} from "react"
 
 import {
   createUserWithEmailAndPassword,
 } from "firebase/auth"
 
 import {
+  auth,
+} from "../firebase"
+
+import {
   useNavigate,
 } from "react-router-dom"
 
-import { auth } from "../firebase"
-
 function Signup() {
-  const navigate = useNavigate()
+  const navigate =
+    useNavigate()
 
   const [email, setEmail] =
     useState("")
 
   const [password, setPassword] =
+    useState("")
+
+  const [error, setError] =
     useState("")
 
   const signup = async () => {
@@ -27,13 +35,11 @@ function Signup() {
         password
       )
 
-      alert(
-        "Account created successfully 🚀"
-      )
-
       navigate("/dashboard")
-    } catch (error) {
-      alert(error.message)
+    } catch (err) {
+      setError(
+        err.message
+      )
     }
   }
 
@@ -41,102 +47,125 @@ function Signup() {
     <div
       style={{
         minHeight: "100vh",
+        background:
+          "#020617",
 
         display: "flex",
 
-        justifyContent: "center",
+        justifyContent:
+          "center",
 
-        alignItems: "center",
-
-        background:
-          "radial-gradient(circle at top, #1e3a8a 0%, #020617 70%)",
+        alignItems:
+          "center",
 
         color: "white",
-
-        fontFamily: "Arial",
       }}
     >
       <div
         style={{
-          background:
-            "rgba(255,255,255,0.08)",
+          width: "380px",
 
           padding: "40px",
 
-          borderRadius: "24px",
+          borderRadius:
+            "28px",
 
-          width: "400px",
+          background:
+            "rgba(255,255,255,0.05)",
+
+          backdropFilter:
+            "blur(18px)",
         }}
       >
-        <h1>Create Account</h1>
+        <h1>
+          Create Account
+        </h1>
 
         <input
+          placeholder="Email"
           value={email}
           onChange={(e) =>
-            setEmail(e.target.value)
+            setEmail(
+              e.target.value
+            )
           }
-          placeholder="Email"
-          style={{
-            width: "100%",
-
-            padding: "14px",
-
-            marginTop: "20px",
-
-            borderRadius: "12px",
-
-            border: "none",
-          }}
+          style={styles.input}
         />
 
         <input
+          type="password"
+          placeholder="Password"
           value={password}
           onChange={(e) =>
             setPassword(
               e.target.value
             )
           }
-          type="password"
-          placeholder="Password"
-          style={{
-            width: "100%",
-
-            padding: "14px",
-
-            marginTop: "20px",
-
-            borderRadius: "12px",
-
-            border: "none",
-          }}
+          style={styles.input}
         />
+
+        {error && (
+          <p
+            style={{
+              color:
+                "#f87171",
+            }}
+          >
+            {error}
+          </p>
+        )}
 
         <button
           onClick={signup}
-          style={{
-            width: "100%",
-
-            padding: "16px",
-
-            marginTop: "20px",
-
-            borderRadius: "14px",
-
-            border: "none",
-
-            background:
-              "linear-gradient(to right, #3b82f6, #8b5cf6)",
-
-            color: "white",
-
-            cursor: "pointer",
-          }}
+          style={styles.button}
         >
-          Create Account
+          Sign Up
         </button>
       </div>
     </div>
   )
+}
+
+const styles = {
+  input: {
+    width: "100%",
+
+    padding: "16px",
+
+    marginTop: "16px",
+
+    borderRadius:
+      "16px",
+
+    border: "none",
+
+    background:
+      "rgba(255,255,255,0.06)",
+
+    color: "white",
+  },
+
+  button: {
+    width: "100%",
+
+    marginTop: "20px",
+
+    padding: "16px",
+
+    borderRadius:
+      "18px",
+
+    border: "none",
+
+    background:
+      "linear-gradient(to right, #2563eb, #4f46e5)",
+
+    color: "white",
+
+    fontWeight: "600",
+
+    cursor: "pointer",
+  },
 }
 
 export default Signup

@@ -6,48 +6,20 @@ import {
 
 import Navbar from "../components/Navbar"
 import Sidebar from "../components/Sidebar"
-import HeroSection from "../components/HeroSection"
-import FeaturesSection from "../components/FeaturesSection"
-import TestimonialsSection from "../components/TestimonialsSection"
-import Footer from "../components/Footer"
 import FloatingOrb from "../components/FloatingOrb"
-import SectionFade from "../components/SectionFade"
 
-import FileUploader from "../components/FileUploader"
-import MemoryPanel from "../components/MemoryPanel"
-import WorkspaceCard from "../components/WorkspaceCard"
-import ModelSelector from "../components/ModelSelector"
-import PersonalitySelector from "../components/PersonalitySelector"
-import StatsCards from "../components/StatsCards"
-import AnalyticsPanel from "../components/AnalyticsPanel"
-import AIStatus from "../components/AIStatus"
-import VoiceInput from "../components/VoiceInput"
-import TypingLoader from "../components/TypingLoader"
 import ChatBubble from "../components/ChatBubble"
-import QuickActions from "../components/QuickActions"
-import ThemeSwitcher from "../components/ThemeSwitcher"
-import TaskPanel from "../components/TaskPanel"
-import ExportChat from "../components/ExportChat"
-import ImageGallery from "../components/ImageGallery"
+import TypingLoader from "../components/TypingLoader"
 
 function Dashboard({ user, logout }) {
-  const [activeTab, setActiveTab] = useState("AI Chat")
-  const [selectedModel, setSelectedModel] = useState("GPT Core")
-  const [personality, setPersonality] = useState("Jarvis")
+  const [message, setMessage] =
+    useState("")
 
-  const [message, setMessage] = useState("")
-  const [chat, setChat] = useState([])
+  const [chat, setChat] =
+    useState([])
 
-  const [imageGallery, setImageGallery] = useState([])
-  const [imageCount, setImageCount] = useState(0)
-
-  const [isTyping, setIsTyping] = useState(false)
-  const [loading, setLoading] = useState(false)
-
-  const [theme, setTheme] = useState({
-    name: "Galaxy",
-    bg: "#020617",
-  })
+  const [loading, setLoading] =
+    useState(false)
 
   const chatEndRef = useRef(null)
 
@@ -55,62 +27,80 @@ function Dashboard({ user, logout }) {
     chatEndRef.current?.scrollIntoView({
       behavior: "smooth",
     })
-  }, [chat, isTyping])
+  }, [chat, loading])
 
   const sendMessage = async () => {
-    if (!message.trim() || loading) return
+    if (!message.trim() || loading)
+      return
 
-    const currentMessage = message
+    const currentMessage =
+      message
 
     const userMessage = {
       sender: "user",
       text: currentMessage,
     }
 
-    setChat((prev) => [...prev, userMessage])
+    setChat((prev) => [
+      ...prev,
+      userMessage,
+    ])
 
     setMessage("")
-    setIsTyping(true)
     setLoading(true)
 
     try {
-      const response = await fetch(
-        "http://localhost:3001/chat",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            message: currentMessage,
-            personality,
-            selectedModel,
-          }),
-        }
-      )
+      const response =
+        await fetch(
+          "http://localhost:3001/chat",
+          {
+            method: "POST",
 
-      const data = await response.json()
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body: JSON.stringify({
+              message:
+                currentMessage,
+
+              personality:
+                "Jarvis",
+
+              selectedModel:
+                "GPT Core",
+            }),
+          }
+        )
+
+      const data =
+        await response.json()
 
       const aiMessage = {
         sender: "ai",
-        text: data.reply || "No reply received.",
+        text:
+          data.reply ||
+          "No response.",
       }
 
-      setTimeout(() => {
-        setChat((prev) => [...prev, aiMessage])
-      }, 500)
+      setChat((prev) => [
+        ...prev,
+        aiMessage,
+      ])
     } catch (error) {
       console.log(error)
 
-      const errorMessage = {
-        sender: "ai",
-        text: "Backend connection failed.",
-      }
-
-      setChat((prev) => [...prev, errorMessage])
+      setChat((prev) => [
+        ...prev,
+        {
+          sender: "ai",
+          text:
+            "Backend connection failed.",
+        },
+      ])
     }
 
-    setIsTyping(false)
     setLoading(false)
   }
 
@@ -121,141 +111,224 @@ function Dashboard({ user, logout }) {
       <div
         style={{
           minHeight: "100vh",
-          background: `linear-gradient(135deg, ${theme.bg} 0%, #0f172a 100%)`,
+
+          background:
+            "linear-gradient(135deg, #020617 0%, #0f172a 100%)",
+
           color: "white",
-          fontFamily: "Inter, sans-serif",
-          padding: "20px",
+
+          fontFamily:
+            "Inter, sans-serif",
+
+          display: "flex",
         }}
       >
-        <Navbar user={user} logout={logout} />
+        <Sidebar />
 
-        <div style={{ display: "flex", gap: "20px" }}>
-          <Sidebar
-            activeTab={activeTab}
-            setActiveTab={setActiveTab}
+        <div
+          style={{
+            flex: 1,
+
+            display: "flex",
+
+            flexDirection:
+              "column",
+
+            height: "100vh",
+          }}
+        >
+          <Navbar
+            user={user}
+            logout={logout}
           />
 
-          <div style={{ flex: 1 }}>
-            <SectionFade>
-              <HeroSection />
-            </SectionFade>
+          {/* CHAT AREA */}
+          <div
+            style={{
+              flex: 1,
 
-            <SectionFade>
-              <FeaturesSection />
-            </SectionFade>
+              overflowY: "auto",
 
-            <SectionFade>
-              <TestimonialsSection />
-            </SectionFade>
+              padding:
+                "40px 80px",
 
-            <div id="chat-section">
-              <AIStatus
-                selectedModel={selectedModel}
-                activeTab={activeTab}
-              />
+              display: "flex",
 
-              <ThemeSwitcher theme={theme} setTheme={setTheme} />
-
-              <WorkspaceCard
-                title={activeTab}
-                description={`Running on ${selectedModel}`}
-              />
-
-              <StatsCards
-                chatCount={chat.length}
-                imageCount={imageCount}
-                activeWorkspace={activeTab}
-              />
-
-              <AnalyticsPanel
-                chatCount={chat.length}
-                imageCount={imageCount}
-              />
-
-              <ModelSelector
-                selectedModel={selectedModel}
-                setSelectedModel={setSelectedModel}
-              />
-
-              <PersonalitySelector
-                personality={personality}
-                setPersonality={setPersonality}
-              />
-
-              <QuickActions setMessage={setMessage} />
-
-              <TaskPanel />
-              <FileUploader />
-              <MemoryPanel chat={chat} />
-              <ExportChat chat={chat} />
-
-              <div style={{ minHeight: "400px" }}>
-                {chat.map((msg, i) => (
-                  <ChatBubble
-                    key={i}
-                    sender={msg.sender}
-                    text={msg.text}
-                  />
-                ))}
-
-                {isTyping && <TypingLoader />}
-
-                <div ref={chatEndRef} />
-              </div>
-
-              {/* INPUT AREA */}
+              flexDirection:
+                "column",
+            }}
+          >
+            {chat.length === 0 && (
               <div
                 style={{
-                  display: "flex",
-                  gap: "14px",
-                  padding: "16px",
-                  borderRadius: "24px",
-                  background: "rgba(255,255,255,0.04)",
+                  marginTop: "100px",
+
+                  textAlign:
+                    "center",
+
+                  opacity: 0.9,
                 }}
               >
-                <input
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !loading) {
-                      sendMessage()
-                    }
-                  }}
-                  placeholder="Message Aethrix..."
+                <h1
                   style={{
-                    flex: 1,
-                    padding: "18px",
-                    borderRadius: "18px",
-                    border: "none",
-                    background: "rgba(255,255,255,0.03)",
-                    color: "white",
-                    outline: "none",
-                  }}
-                />
+                    fontSize:
+                      "64px",
 
-                <VoiceInput setMessage={setMessage} />
-
-                <button
-                  onClick={sendMessage}
-                  disabled={loading}
-                  style={{
-                    padding: "16px 24px",
-                    borderRadius: "18px",
-                    border: "none",
-                    background:
-                      "linear-gradient(to right, #2563eb, #4f46e5)",
-                    color: "white",
-                    cursor: loading ? "not-allowed" : "pointer",
-                    opacity: loading ? 0.6 : 1,
+                    marginBottom:
+                      "20px",
                   }}
                 >
-                  {loading ? "Thinking..." : "Send"}
-                </button>
+                  Aethrix AI
+                </h1>
+
+                <p
+                  style={{
+                    color:
+                      "#94a3b8",
+
+                    fontSize:
+                      "20px",
+                  }}
+                >
+                  Your futuristic AI
+                  workspace.
+                </p>
               </div>
+            )}
 
-              <ImageGallery images={imageGallery} />
+            {chat.map((msg, i) => (
+              <ChatBubble
+                key={i}
+                sender={msg.sender}
+                text={msg.text}
+              />
+            ))}
 
-              <Footer />
+            {loading && (
+              <TypingLoader />
+            )}
+
+            <div ref={chatEndRef} />
+          </div>
+
+          {/* INPUT BAR */}
+          <div
+            style={{
+              padding:
+                "24px 40px",
+
+              borderTop:
+                "1px solid rgba(255,255,255,0.08)",
+
+              background:
+                "rgba(255,255,255,0.03)",
+
+              backdropFilter:
+                "blur(14px)",
+            }}
+          >
+            <div
+              style={{
+                maxWidth:
+                  "1000px",
+
+                margin:
+                  "0 auto",
+
+                display:
+                  "flex",
+
+                gap: "16px",
+              }}
+            >
+              <input
+                value={message}
+                onChange={(e) =>
+                  setMessage(
+                    e.target.value
+                  )
+                }
+                onKeyDown={(e) => {
+                  if (
+                    e.key ===
+                      "Enter" &&
+                    !loading
+                  ) {
+                    sendMessage()
+                  }
+                }}
+                placeholder="Message Aethrix..."
+                style={{
+                  flex: 1,
+
+                  padding:
+                    "20px",
+
+                  borderRadius:
+                    "24px",
+
+                  border:
+                    "1px solid rgba(255,255,255,0.08)",
+
+                  background:
+                    "rgba(255,255,255,0.05)",
+
+                  color:
+                    "white",
+
+                  outline:
+                    "none",
+
+                  fontSize:
+                    "15px",
+
+                  backdropFilter:
+                    "blur(12px)",
+                }}
+              />
+
+              <button
+                onClick={
+                  sendMessage
+                }
+                disabled={
+                  loading
+                }
+                style={{
+                  padding:
+                    "18px 28px",
+
+                  borderRadius:
+                    "22px",
+
+                  border:
+                    "none",
+
+                  background:
+                    "linear-gradient(to right, #2563eb, #4f46e5)",
+
+                  color:
+                    "white",
+
+                  cursor:
+                    loading
+                      ? "not-allowed"
+                      : "pointer",
+
+                  fontWeight:
+                    "600",
+
+                  fontSize:
+                    "15px",
+
+                  boxShadow:
+                    "0 8px 24px rgba(37,99,235,0.35)",
+                }}
+              >
+                {loading
+                  ? "Thinking..."
+                  : "Send"}
+              </button>
             </div>
           </div>
         </div>

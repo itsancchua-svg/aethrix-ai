@@ -13,7 +13,7 @@ function ChatBubble({
     <motion.div
       initial={{
         opacity: 0,
-        y: 10,
+        y: 15,
       }}
       animate={{
         opacity: 1,
@@ -23,52 +23,39 @@ function ChatBubble({
         duration: 0.25,
       }}
       style={{
-        display:
-          "flex",
-
-        justifyContent:
-          isUser
-            ? "flex-end"
-            : "flex-start",
-
-        marginBottom:
-          "14px",
+        display: "flex",
+        justifyContent: isUser
+          ? "flex-end"
+          : "flex-start",
+        marginBottom: "18px",
       }}
     >
       <div
         style={{
-          maxWidth:
-            "75%",
+          maxWidth: "78%",
+          padding: "18px 20px",
+          borderRadius: isUser
+            ? "24px 24px 6px 24px"
+            : "24px 24px 24px 6px",
 
-          padding:
-            "16px 18px",
+          background: isUser
+            ? "linear-gradient(135deg, #2563eb, #4f46e5)"
+            : "rgba(255,255,255,0.06)",
 
-          borderRadius:
-            isUser
-              ? "18px 18px 4px 18px"
-              : "18px 18px 18px 4px",
+          border: isUser
+            ? "none"
+            : "1px solid rgba(255,255,255,0.08)",
 
-          background:
-            isUser
-              ? "linear-gradient(to right, #2563eb, #4f46e5)"
-              : "rgba(255,255,255,0.05)",
+          color: "white",
+          lineHeight: "1.8",
+          fontSize: "15px",
 
-          color:
-            "white",
+          backdropFilter: "blur(16px)",
 
-          border:
-            isUser
-              ? "none"
-              : "1px solid rgba(255,255,255,0.06)",
+          boxShadow:
+            "0 8px 24px rgba(0,0,0,0.25)",
 
-          fontSize:
-            "15px",
-
-          lineHeight:
-            "1.6",
-
-          backdropFilter:
-            "blur(10px)",
+          whiteSpace: "pre-wrap",
         }}
       >
         {String(text)
