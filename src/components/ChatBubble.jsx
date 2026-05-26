@@ -71,7 +71,9 @@ function ChatBubble({
             "blur(10px)",
         }}
       >
-        {text}
+        {String(text)
+          .replace(/\*\*/g, "")
+          .replace(/\*/g, "")}
       </div>
     </motion.div>
   )
