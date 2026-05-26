@@ -24,7 +24,11 @@ import {
   onSnapshot,
 } from "firebase/firestore"
 
-function Dashboard({ user, logout }) {
+import {
+  onAuthStateChanged,
+} from "firebase/auth"
+
+function Dashboard({ logout }) {
   const [message, setMessage] =
     useState("")
 
@@ -34,59 +38,135 @@ function Dashboard({ user, logout }) {
   const [loading, setLoading] =
     useState(false)
 
+  const [currentUser, setCurrentUser] =
+    useState(null)
+
   const chatEndRef = useRef(null)
 
+  // AUTH LISTENER
   useEffect(() => {
-    if (!auth.currentUser) return
+    const unsubscribe =
+      onAuthStateChanged(
+        auth,
+        (user) => {
+          console.log(
+            "AUTH USER:",
+            user
+          )
+
+          setCurrentUser(user)
+        }
+      )
+
+    return () => unsubscribe()
+  }, [])
+
+  // LOAD FIRESTORE MESSAGES
+  useEffect(() => {
+    if (!currentUser?.uid) {
+      console.log(
+        "NO AUTH USER YET"
+      )
+      return
+    }
+
+    console.log(
+      "LOADING FIRESTORE..."
+    )
 
     const q = query(
       collection(
         db,
         "users",
-        auth.currentUser.uid,
+        currentUser.uid,
         "messages"
       ),
       orderBy("createdAt")
     )
 
     const unsubscribe =
-      onSnapshot(q, (snapshot) => {
-        const loaded =
-          snapshot.docs.map(
-            (doc) => doc.data()
+      onSnapshot(
+        q,
+        (snapshot) => {
+          const loaded =
+            snapshot.docs.map(
+              (doc) =>
+                doc.data()
+            )
+
+          console.log(
+            "MESSAGES LOADED:",
+            loaded
           )
 
-        setChat(loaded)
-      })
+          setChat(loaded)
+        },
+        (error) => {
+          console.log(
+            "FIRESTORE LOAD ERROR:",
+            error
+          )
+        }
+      )
 
     return () => unsubscribe()
-  }, [])
+  }, [currentUser])
 
+  // AUTO SCROLL
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({
       behavior: "smooth",
     })
   }, [chat])
 
+  // SAVE MESSAGE
   const saveMessage =
     async (msg) => {
-      if (!auth.currentUser)
-        return
+      try {
+        console.log(
+          "CURRENT USER:",
+          currentUser
+        )
 
-      await addDoc(
-        collection(
-          db,
-          "users",
-          auth.currentUser.uid,
-          "messages"
-        ),
-        {
-          ...msg,
-          createdAt: Date.now(),
+        if (!currentUser?.uid) {
+          console.log(
+            "NO UID FOUND"
+          )
+          return
         }
-      )
+
+        console.log(
+          "ATTEMPTING FIRESTORE WRITE..."
+        )
+
+        const docRef =
+          await addDoc(
+            collection(
+              db,
+              "users",
+              currentUser.uid,
+              "messages"
+            ),
+            {
+              ...msg,
+              createdAt:
+                Date.now(),
+            }
+          )
+
+        console.log(
+          "MESSAGE SAVED:",
+          docRef.id
+        )
+      } catch (error) {
+        console.log(
+          "FIRESTORE SAVE ERROR:",
+          error
+        )
+      }
     }
 
+  // SEND MESSAGE
   const sendMessage =
     async () => {
       if (
@@ -167,13 +247,10 @@ function Dashboard({ user, logout }) {
           aiMessage
         )
       } catch (error) {
-        console.log(error)
-
-        await saveMessage({
-          sender: "ai",
-          text:
-            "Memory system failed.",
-        })
+        console.log(
+          "CHAT ERROR:",
+          error
+        )
       }
 
       setLoading(false)
@@ -185,7 +262,8 @@ function Dashboard({ user, logout }) {
 
       <div
         style={{
-          minHeight: "100vh",
+          minHeight:
+            "100vh",
 
           background:
             "linear-gradient(135deg, #020617 0%, #0f172a 100%)",
@@ -213,7 +291,7 @@ function Dashboard({ user, logout }) {
           }}
         >
           <Navbar
-            user={user}
+            user={currentUser}
             logout={logout}
           />
 
@@ -221,7 +299,8 @@ function Dashboard({ user, logout }) {
             style={{
               flex: 1,
 
-              overflowY: "auto",
+              overflowY:
+                "auto",
 
               padding:
                 "40px 80px",

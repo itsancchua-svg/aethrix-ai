@@ -11,281 +11,138 @@ import {
 } from "../firebase"
 
 function Login() {
-  const [email,
-    setEmail] =
+  const [email, setEmail] =
     useState("")
 
-  const [password,
-    setPassword] =
+  const [password, setPassword] =
     useState("")
 
-  const [loading,
-    setLoading] =
-    useState(false)
+  const [error, setError] =
+    useState("")
 
-  const handleLogin =
-    async () => {
-      if (
-        !email ||
-        !password
-      ) {
-        alert(
-          "Please fill all fields."
-        )
+  const login = async () => {
+    try {
+      setError("")
 
-        return
-      }
+      await signInWithEmailAndPassword(
+        auth,
+        email,
+        password
+      )
 
-      try {
-        setLoading(true)
+      console.log(
+        "LOGIN SUCCESS"
+      )
+    } catch (err) {
+      console.log(err)
 
-        await signInWithEmailAndPassword(
-          auth,
-          email,
-          password
-        )
-
-      } catch (error) {
-        console.log(error)
-
-        alert(
-          error.message
-        )
-      }
-
-      setLoading(false)
+      setError(
+        "Invalid credentials."
+      )
     }
+  }
 
   return (
     <div
       style={{
-        minHeight:
-          "100vh",
-
-        display:
-          "flex",
-
+        minHeight: "100vh",
+        background:
+          "#020617",
+        display: "flex",
         justifyContent:
           "center",
-
         alignItems:
           "center",
-
-        background:
-          "radial-gradient(circle at top, #1e3a8a 0%, #020617 70%)",
-
-        color:
-          "white",
-
-        fontFamily:
-          "'Inter', sans-serif",
-
-        padding:
-          "20px",
+        color: "white",
       }}
     >
       <div
         style={{
-          background:
-            "rgba(255,255,255,0.08)",
-
-          padding:
-            "40px",
-
+          width: "380px",
+          padding: "40px",
           borderRadius:
             "28px",
-
-          width:
-            "100%",
-
-          maxWidth:
-            "420px",
-
+          background:
+            "rgba(255,255,255,0.05)",
           backdropFilter:
-            "blur(20px)",
-
-          border:
-            "1px solid rgba(255,255,255,0.06)",
-
-          boxShadow:
-            "0 20px 60px rgba(0,0,0,0.35)",
+            "blur(18px)",
         }}
       >
-        <h1
-          style={{
-            marginTop: 0,
-
-            marginBottom:
-              "12px",
-
-            fontSize:
-              "42px",
-
-            fontWeight:
-              "800",
-
-            letterSpacing:
-              "-2px",
-          }}
-        >
-          Aethrix AI
+        <h1>
+          Welcome Back
         </h1>
 
-        <p
-          style={{
-            color:
-              "#94a3b8",
-
-            marginBottom:
-              "28px",
-
-            lineHeight:
-              "1.7",
-          }}
-        >
-          Welcome back.
-          Access your AI workspace.
-        </p>
-
         <input
+          placeholder="Email"
           value={email}
-          onChange={(
-            e
-          ) =>
+          onChange={(e) =>
             setEmail(
               e.target.value
             )
           }
-          placeholder="Email"
-          style={{
-            width:
-              "100%",
-
-            padding:
-              "16px",
-
-            marginTop:
-              "14px",
-
-            borderRadius:
-              "16px",
-
-            border:
-              "1px solid rgba(255,255,255,0.06)",
-
-            background:
-              "rgba(255,255,255,0.04)",
-
-            color:
-              "white",
-
-            outline:
-              "none",
-
-            fontSize:
-              "15px",
-
-            boxSizing:
-              "border-box",
-          }}
+          style={styles.input}
         />
 
         <input
           type="password"
+          placeholder="Password"
           value={password}
-          onChange={(
-            e
-          ) =>
+          onChange={(e) =>
             setPassword(
               e.target.value
             )
           }
-          placeholder="Password"
-          style={{
-            width:
-              "100%",
-
-            padding:
-              "16px",
-
-            marginTop:
-              "18px",
-
-            borderRadius:
-              "16px",
-
-            border:
-              "1px solid rgba(255,255,255,0.06)",
-
-            background:
-              "rgba(255,255,255,0.04)",
-
-            color:
-              "white",
-
-            outline:
-              "none",
-
-            fontSize:
-              "15px",
-
-            boxSizing:
-              "border-box",
-          }}
+          style={styles.input}
         />
 
+        {error && (
+          <p
+            style={{
+              color:
+                "#f87171",
+            }}
+          >
+            {error}
+          </p>
+        )}
+
         <button
-          onClick={
-            handleLogin
-          }
-          disabled={
-            loading
-          }
-          style={{
-            width:
-              "100%",
-
-            padding:
-              "16px",
-
-            marginTop:
-              "24px",
-
-            borderRadius:
-              "18px",
-
-            border:
-              "none",
-
-            background:
-              "linear-gradient(to right, #2563eb, #4f46e5)",
-
-            color:
-              "white",
-
-            cursor:
-              "pointer",
-
-            fontWeight:
-              "700",
-
-            fontSize:
-              "15px",
-
-            boxShadow:
-              "0 10px 30px rgba(37,99,235,0.25)",
-
-            transition:
-              "0.25s ease",
-          }}
+          onClick={login}
+          style={styles.button}
         >
-          {loading
-            ? "Signing in..."
-            : "Login"}
+          Login
         </button>
       </div>
     </div>
   )
+}
+
+const styles = {
+  input: {
+    width: "100%",
+    padding: "16px",
+    marginTop: "16px",
+    borderRadius:
+      "16px",
+    border: "none",
+    background:
+      "rgba(255,255,255,0.06)",
+    color: "white",
+  },
+
+  button: {
+    width: "100%",
+    marginTop: "20px",
+    padding: "16px",
+    borderRadius:
+      "18px",
+    border: "none",
+    background:
+      "linear-gradient(to right, #2563eb, #4f46e5)",
+    color: "white",
+    fontWeight: "600",
+    cursor: "pointer",
+  },
 }
 
 export default Login
