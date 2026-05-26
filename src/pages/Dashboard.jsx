@@ -61,14 +61,10 @@ function Dashboard({ logout }) {
     return () => unsubscribe()
   }, [])
 
-  // LOAD FIRESTORE MESSAGES
+  // LOAD CHAT
   useEffect(() => {
-    if (!currentUser?.uid) {
-      console.log(
-        "NO AUTH USER YET"
-      )
+    if (!currentUser?.uid)
       return
-    }
 
     console.log(
       "LOADING FIRESTORE..."
@@ -95,7 +91,7 @@ function Dashboard({ logout }) {
             )
 
           console.log(
-            "MESSAGES LOADED:",
+            "MESSAGES:",
             loaded
           )
 
@@ -103,7 +99,7 @@ function Dashboard({ logout }) {
         },
         (error) => {
           console.log(
-            "FIRESTORE LOAD ERROR:",
+            "FIRESTORE ERROR:",
             error
           )
         }
@@ -123,44 +119,37 @@ function Dashboard({ logout }) {
   const saveMessage =
     async (msg) => {
       try {
-        console.log(
-          "CURRENT USER:",
-          currentUser
-        )
-
         if (!currentUser?.uid) {
           console.log(
-            "NO UID FOUND"
+            "NO USER FOUND"
           )
           return
         }
 
         console.log(
-          "ATTEMPTING FIRESTORE WRITE..."
+          "SAVING MESSAGE..."
         )
 
-        const docRef =
-          await addDoc(
-            collection(
-              db,
-              "users",
-              currentUser.uid,
-              "messages"
-            ),
-            {
-              ...msg,
-              createdAt:
-                Date.now(),
-            }
-          )
+        await addDoc(
+          collection(
+            db,
+            "users",
+            currentUser.uid,
+            "messages"
+          ),
+          {
+            ...msg,
+            createdAt:
+              Date.now(),
+          }
+        )
 
         console.log(
-          "MESSAGE SAVED:",
-          docRef.id
+          "MESSAGE SAVED"
         )
       } catch (error) {
         console.log(
-          "FIRESTORE SAVE ERROR:",
+          "SAVE ERROR:",
           error
         )
       }
@@ -193,7 +182,7 @@ function Dashboard({ logout }) {
       try {
         const response =
           await fetch(
-            "http://localhost:3001/chat",
+            "https://aethrix-ai.vercel.app/api/chat",
             {
               method: "POST",
 
@@ -248,9 +237,15 @@ function Dashboard({ logout }) {
         )
       } catch (error) {
         console.log(
-          "CHAT ERROR:",
+          "BACKEND ERROR:",
           error
         )
+
+        await saveMessage({
+          sender: "ai",
+          text:
+            "Backend connection failed.",
+        })
       }
 
       setLoading(false)
@@ -395,6 +390,8 @@ function Dashboard({ logout }) {
               }}
             >
               <input
+                id="message-input"
+                name="message"
                 value={message}
                 onChange={(e) =>
                   setMessage(
