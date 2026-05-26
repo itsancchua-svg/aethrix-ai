@@ -11,6 +11,19 @@ import FloatingOrb from "../components/FloatingOrb"
 import ChatBubble from "../components/ChatBubble"
 import TypingLoader from "../components/TypingLoader"
 
+import {
+  auth,
+  db,
+} from "../firebase"
+
+import {
+  collection,
+  addDoc,
+  query,
+  orderBy,
+  onSnapshot,
+} from "firebase/firestore"
+
 function Dashboard({ user, logout }) {
   const [message, setMessage] =
     useState("")
@@ -24,114 +37,147 @@ function Dashboard({ user, logout }) {
   const chatEndRef = useRef(null)
 
   useEffect(() => {
+    if (!auth.currentUser) return
+
+    const q = query(
+      collection(
+        db,
+        "users",
+        auth.currentUser.uid,
+        "messages"
+      ),
+      orderBy("createdAt")
+    )
+
+    const unsubscribe =
+      onSnapshot(q, (snapshot) => {
+        const loaded =
+          snapshot.docs.map(
+            (doc) => doc.data()
+          )
+
+        setChat(loaded)
+      })
+
+    return () => unsubscribe()
+  }, [])
+
+  useEffect(() => {
     chatEndRef.current?.scrollIntoView({
       behavior: "smooth",
     })
   }, [chat])
 
-  const sendMessage = async () => {
-    if (!message.trim() || loading)
-      return
+  const saveMessage =
+    async (msg) => {
+      if (!auth.currentUser)
+        return
 
-    const currentMessage =
-      message
-
-    const userMessage = {
-      sender: "user",
-      text: currentMessage,
+      await addDoc(
+        collection(
+          db,
+          "users",
+          auth.currentUser.uid,
+          "messages"
+        ),
+        {
+          ...msg,
+          createdAt: Date.now(),
+        }
+      )
     }
 
-    setChat((prev) => [
-      ...prev,
-      userMessage,
-    ])
+  const sendMessage =
+    async () => {
+      if (
+        !message.trim() ||
+        loading
+      )
+        return
 
-    setMessage("")
-    setLoading(true)
+      const currentMessage =
+        message
 
-    try {
-      const response =
-        await fetch(
-          "http://localhost:3001/chat",
-          {
-            method: "POST",
-
-            headers: {
-              "Content-Type":
-                "application/json",
-            },
-
-            body: JSON.stringify({
-              message:
-                currentMessage,
-
-              personality:
-                "Jarvis",
-
-              selectedModel:
-                "GPT Core",
-            }),
-          }
-        )
-
-      const reader =
-        response.body.getReader()
-
-      const decoder =
-        new TextDecoder()
-
-      let aiText = ""
-
-      setChat((prev) => [
-        ...prev,
-        {
-          sender: "ai",
-          text: "",
-        },
-      ])
-
-      while (true) {
-        const {
-          done,
-          value,
-        } = await reader.read()
-
-        if (done) break
-
-        const chunk =
-          decoder.decode(value)
-
-        aiText += chunk
-
-        setChat((prev) => {
-          const updated =
-            [...prev]
-
-          updated[
-            updated.length - 1
-          ] = {
-            sender: "ai",
-            text: aiText,
-          }
-
-          return updated
-        })
+      const userMessage = {
+        sender: "user",
+        text: currentMessage,
       }
-    } catch (error) {
-      console.log(error)
 
-      setChat((prev) => [
-        ...prev,
-        {
+      await saveMessage(
+        userMessage
+      )
+
+      setMessage("")
+      setLoading(true)
+
+      try {
+        const response =
+          await fetch(
+            "http://localhost:3001/chat",
+            {
+              method: "POST",
+
+              headers: {
+                "Content-Type":
+                  "application/json",
+              },
+
+              body: JSON.stringify({
+                message:
+                  currentMessage,
+
+                personality:
+                  "Jarvis",
+
+                selectedModel:
+                  "GPT Core",
+              }),
+            }
+          )
+
+        const reader =
+          response.body.getReader()
+
+        const decoder =
+          new TextDecoder()
+
+        let aiText = ""
+
+        while (true) {
+          const {
+            done,
+            value,
+          } =
+            await reader.read()
+
+          if (done) break
+
+          const chunk =
+            decoder.decode(value)
+
+          aiText += chunk
+        }
+
+        const aiMessage = {
+          sender: "ai",
+          text: aiText,
+        }
+
+        await saveMessage(
+          aiMessage
+        )
+      } catch (error) {
+        console.log(error)
+
+        await saveMessage({
           sender: "ai",
           text:
-            "Streaming failed.",
-        },
-      ])
-    }
+            "Memory system failed.",
+        })
+      }
 
-    setLoading(false)
-  }
+      setLoading(false)
+    }
 
   return (
     <div>
@@ -171,7 +217,6 @@ function Dashboard({ user, logout }) {
             logout={logout}
           />
 
-          {/* CHAT AREA */}
           <div
             style={{
               flex: 1,
@@ -187,24 +232,21 @@ function Dashboard({ user, logout }) {
                 "column",
             }}
           >
-            {chat.length === 0 && (
+            {chat.length ===
+              0 && (
               <div
                 style={{
-                  marginTop: "100px",
+                  marginTop:
+                    "100px",
 
                   textAlign:
                     "center",
-
-                  opacity: 0.9,
                 }}
               >
                 <h1
                   style={{
                     fontSize:
                       "64px",
-
-                    marginBottom:
-                      "20px",
                   }}
                 >
                   Aethrix AI
@@ -214,33 +256,39 @@ function Dashboard({ user, logout }) {
                   style={{
                     color:
                       "#94a3b8",
-
-                    fontSize:
-                      "20px",
                   }}
                 >
-                  Your futuristic AI
-                  workspace.
+                  Persistent AI
+                  workspace
                 </p>
               </div>
             )}
 
-            {chat.map((msg, i) => (
-              <ChatBubble
-                key={i}
-                sender={msg.sender}
-                text={msg.text}
-              />
-            ))}
+            {chat.map(
+              (msg, i) => (
+                <ChatBubble
+                  key={i}
+                  sender={
+                    msg.sender
+                  }
+                  text={
+                    msg.text
+                  }
+                />
+              )
+            )}
 
             {loading && (
               <TypingLoader />
             )}
 
-            <div ref={chatEndRef} />
+            <div
+              ref={
+                chatEndRef
+              }
+            />
           </div>
 
-          {/* INPUT */}
           <div
             style={{
               padding:
@@ -251,9 +299,6 @@ function Dashboard({ user, logout }) {
 
               background:
                 "rgba(255,255,255,0.03)",
-
-              backdropFilter:
-                "blur(14px)",
             }}
           >
             <div
