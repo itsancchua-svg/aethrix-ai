@@ -179,76 +179,20 @@ function Dashboard({ logout }) {
       setMessage("")
       setLoading(true)
 
-      try {
-        const response =
-          await fetch(
-            "https://aethrix-ai.vercel.app/api/chat",
-            {
-              method: "POST",
-
-              headers: {
-                "Content-Type":
-                  "application/json",
-              },
-
-              body: JSON.stringify({
-                message:
-                  currentMessage,
-
-                personality:
-                  "Jarvis",
-
-                selectedModel:
-                  "GPT Core",
-              }),
-            }
-          )
-
-        const reader =
-          response.body.getReader()
-
-        const decoder =
-          new TextDecoder()
-
-        let aiText = ""
-
-        while (true) {
-          const {
-            done,
-            value,
-          } =
-            await reader.read()
-
-          if (done) break
-
-          const chunk =
-            decoder.decode(value)
-
-          aiText += chunk
-        }
-
+      // FIRESTORE TEST
+      setTimeout(async () => {
         const aiMessage = {
           sender: "ai",
-          text: aiText,
+          text:
+            "Firestore memory test successful.",
         }
 
         await saveMessage(
           aiMessage
         )
-      } catch (error) {
-        console.log(
-          "BACKEND ERROR:",
-          error
-        )
 
-        await saveMessage({
-          sender: "ai",
-          text:
-            "Backend connection failed.",
-        })
-      }
-
-      setLoading(false)
+        setLoading(false)
+      }, 1000)
     }
 
   return (
