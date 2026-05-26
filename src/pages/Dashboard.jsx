@@ -27,7 +27,7 @@ function Dashboard({ user, logout }) {
     chatEndRef.current?.scrollIntoView({
       behavior: "smooth",
     })
-  }, [chat, loading])
+  }, [chat])
 
   const sendMessage = async () => {
     if (!message.trim() || loading)
@@ -74,20 +74,49 @@ function Dashboard({ user, logout }) {
           }
         )
 
-      const data =
-        await response.json()
+      const reader =
+        response.body.getReader()
 
-      const aiMessage = {
-        sender: "ai",
-        text:
-          data.reply ||
-          "No response.",
-      }
+      const decoder =
+        new TextDecoder()
+
+      let aiText = ""
 
       setChat((prev) => [
         ...prev,
-        aiMessage,
+        {
+          sender: "ai",
+          text: "",
+        },
       ])
+
+      while (true) {
+        const {
+          done,
+          value,
+        } = await reader.read()
+
+        if (done) break
+
+        const chunk =
+          decoder.decode(value)
+
+        aiText += chunk
+
+        setChat((prev) => {
+          const updated =
+            [...prev]
+
+          updated[
+            updated.length - 1
+          ] = {
+            sender: "ai",
+            text: aiText,
+          }
+
+          return updated
+        })
+      }
     } catch (error) {
       console.log(error)
 
@@ -96,7 +125,7 @@ function Dashboard({ user, logout }) {
         {
           sender: "ai",
           text:
-            "Backend connection failed.",
+            "Streaming failed.",
         },
       ])
     }
@@ -211,7 +240,7 @@ function Dashboard({ user, logout }) {
             <div ref={chatEndRef} />
           </div>
 
-          {/* INPUT BAR */}
+          {/* INPUT */}
           <div
             style={{
               padding:
@@ -281,9 +310,6 @@ function Dashboard({ user, logout }) {
 
                   fontSize:
                     "15px",
-
-                  backdropFilter:
-                    "blur(12px)",
                 }}
               />
 
@@ -317,12 +343,6 @@ function Dashboard({ user, logout }) {
 
                   fontWeight:
                     "600",
-
-                  fontSize:
-                    "15px",
-
-                  boxShadow:
-                    "0 8px 24px rgba(37,99,235,0.35)",
                 }}
               >
                 {loading

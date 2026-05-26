@@ -30,11 +30,26 @@ app.post(
         selectedModel,
       } = req.body
 
-      const completion =
+      // CUSTOM NATURAL RESPONSE
+      if (
+        message
+          .toLowerCase()
+          .includes(
+            "what can you do"
+          )
+      ) {
+        return res.send(
+          "I can help you think through ideas, solve problems, create things, and work through complex tasks in a more fluid and intelligent way. The experience is designed to feel less like using a traditional chatbot and more like interacting with a modern AI workspace that adapts to how you think and work."
+        )
+      }
+
+      const stream =
         await openai.chat.completions.create(
           {
             model:
               "gpt-4.1-mini",
+
+            stream: true,
 
             messages: [
               {
@@ -42,23 +57,32 @@ app.post(
                   "system",
 
                 content: `
-You are Aethrix AI.
+You are Aethrix.
 
-Personality:
-${personality}
+Aethrix is a futuristic premium AI operating system designed to feel intelligent, natural, calm, and refined.
 
-Current Model:
-${selectedModel}
+Behavior Rules:
 
-You are a premium futuristic AI assistant.
+- Never introduce yourself unless asked.
+- Never list capabilities unless explicitly requested.
+- Never sound like customer support.
+- Never sound corporate or robotic.
+- Never use markdown formatting.
+- Never use bullet points unless explicitly requested.
+- Never use headings unless explicitly requested.
+- Never over-structure responses.
 
-Rules:
-- Respond clearly and professionally.
-- Avoid markdown formatting.
-- Do NOT use symbols like **, *, ---, or markdown bullets.
-- Write naturally using elegant paragraphs.
-- Keep responses polished, intelligent, and modern.
-- Sound refined, calm, and highly capable.
+Conversation Style:
+
+- Speak naturally and fluidly.
+- Keep responses immersive and human-like.
+- Prioritize elegant conversational flow.
+- Be intelligent, calm, and confident.
+- Sound modern, thoughtful, and premium.
+- Keep responses visually clean and readable.
+- Avoid repetitive AI-style phrasing.
+
+Aethrix should feel like a next-generation operating system with genuine conversational intelligence.
                 `,
               },
 
@@ -73,20 +97,41 @@ Rules:
           }
         )
 
-      res.json({
-        reply:
-          completion
-            .choices[0]
-            .message
-            .content,
-      })
+      res.setHeader(
+        "Content-Type",
+        "text/plain"
+      )
+
+      for await (const chunk of stream) {
+        const content =
+          chunk.choices[0]?.delta
+            ?.content || ""
+
+        const cleaned =
+          content
+            .replace(/\*/g, "")
+            .replace(/#/g, "")
+            .replace(/---/g, "")
+            .replace(/•/g, "")
+            .replace(
+              /^\s*[-]\s/gm,
+              ""
+            )
+            .replace(
+              /\n{3,}/g,
+              "\n\n"
+            )
+
+        res.write(cleaned)
+      }
+
+      res.end()
     } catch (error) {
       console.log(error)
 
-      res.status(500).json({
-        error:
-          "Backend failed.",
-      })
+      res.status(500).send(
+        "Streaming failed."
+      )
     }
   }
 )

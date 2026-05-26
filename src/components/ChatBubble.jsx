@@ -2,6 +2,25 @@ import {
   motion,
 } from "framer-motion"
 
+function cleanText(text) {
+  return String(text)
+
+    // remove markdown symbols
+    .replace(/\*\*/g, "")
+    .replace(/\*/g, "")
+    .replace(/#{1,6}\s?/g, "")
+    .replace(/```/g, "")
+    .replace(/---/g, "")
+
+    // remove markdown bullets
+    .replace(/^\s*[-•]\s/gm, "")
+
+    // remove weird extra spacing
+    .replace(/\n{3,}/g, "\n\n")
+
+    .trim()
+}
+
 function ChatBubble({
   sender,
   text,
@@ -24,43 +43,70 @@ function ChatBubble({
       }}
       style={{
         display: "flex",
-        justifyContent: isUser
-          ? "flex-end"
-          : "flex-start",
-        marginBottom: "18px",
+
+        justifyContent:
+          isUser
+            ? "flex-end"
+            : "flex-start",
+
+        marginBottom:
+          "20px",
       }}
     >
       <div
         style={{
-          maxWidth: "78%",
-          padding: "18px 20px",
-          borderRadius: isUser
-            ? "24px 24px 6px 24px"
-            : "24px 24px 24px 6px",
+          maxWidth:
+            "78%",
 
-          background: isUser
-            ? "linear-gradient(135deg, #2563eb, #4f46e5)"
-            : "rgba(255,255,255,0.06)",
+          padding:
+            "20px 22px",
 
-          border: isUser
-            ? "none"
-            : "1px solid rgba(255,255,255,0.08)",
+          borderRadius:
+            isUser
+              ? "24px 24px 6px 24px"
+              : "24px 24px 24px 6px",
 
-          color: "white",
-          lineHeight: "1.8",
-          fontSize: "15px",
+          background:
+            isUser
+              ? "linear-gradient(135deg, #2563eb, #4f46e5)"
+              : "rgba(255,255,255,0.06)",
 
-          backdropFilter: "blur(16px)",
+          border:
+            isUser
+              ? "none"
+              : "1px solid rgba(255,255,255,0.08)",
+
+          color:
+            "white",
+
+          lineHeight:
+            "1.9",
+
+          fontSize:
+            "15px",
+
+          fontWeight:
+            "400",
+
+          backdropFilter:
+            "blur(16px)",
 
           boxShadow:
             "0 8px 24px rgba(0,0,0,0.25)",
 
-          whiteSpace: "pre-wrap",
+          whiteSpace:
+            "pre-wrap",
+
+          textAlign:
+            isUser
+              ? "left"
+              : "justify",
+
+          overflowWrap:
+            "break-word",
         }}
       >
-        {String(text)
-          .replace(/\*\*/g, "")
-          .replace(/\*/g, "")}
+        {cleanText(text)}
       </div>
     </motion.div>
   )
